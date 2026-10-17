@@ -26,9 +26,10 @@ adjusted), [ ] still open.
       the app computes it). The integration derives it with the hypsometric
       formula instead.
 - [!] Density altitude exponent is −1 (raw 19275 → 1927.5 m), not −2.
-- [!] Battery Service 0x2A19 is readable but only reports coarse steps that
-      flip between 100 % and 50 % on the same unit; the Kestrel app's value
-      comes from LiNK Get Battery Level (20), which the integration now prefers.
+- [!] Battery Service 0x2A19 reports coarse steps (100/50/0 %) that vary
+      between reads on a cold unit. LiNK Get Battery Level (20) always answers
+      100 % on firmware 1.61 and the data snapshot carries no battery field,
+      so the Battery Service value is used and LiNK kept for diagnostics.
 - [!] Date/Time characteristic order is second, minute, hour, day, month,
       year (LE). It is a plain register: reads return the last written value
       and never advance. The running clock is behind LiNK Get/Set Time (14/15).

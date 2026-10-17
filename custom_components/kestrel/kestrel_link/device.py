@@ -172,9 +172,9 @@ class KestrelBleDevice:
     async def _read_link_status(self, client: BleakClient) -> None:
         """Read the running clock and battery level over LiNK (best effort).
 
-        The DROP's Battery Service characteristic only reports coarse steps,
-        whereas LiNK Get Battery Level returns the percentage the Kestrel app
-        shows, so the LiNK value is preferred when available.
+        Battery is taken from the Battery Service when it was readable; the
+        LiNK Get Battery Level value is kept for diagnostics and used only as
+        a fallback.
         """
 
         async def _read(
@@ -210,8 +210,12 @@ class KestrelBleDevice:
         self.state.link_snapshot = snapshot
         if battery is not None and 0 <= battery <= 100:
             self.state.raw["link:battery"] = battery.to_bytes(2, "little")
-            self.state.battery_percent = battery
-            self.state.battery_source = "link"
+            # DROP firmware 1.61 answers Get Battery Level with a constant
+            # 100 %, whereas the Battery Service value does track the cell
+            # (in coarse steps), so LiNK is only a fallback.
+            if self.state.battery_percent is None:
+                self.state.battery_percent = battery
+                self.state.battery_source = "link"
 
     async def async_poll(self, *, rssi: int | None = None) -> DeviceState:
         """Connect, read everything, disconnect, and return a state snapshot."""

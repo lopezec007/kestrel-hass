@@ -194,8 +194,9 @@ async def test_link_clock_read_and_sync() -> None:
     ):
         state = await dev.async_poll()
         assert state.device_time == datetime(2026, 10, 17, 12, 44, 22)
-        assert state.battery_percent == 23
-        assert state.battery_source == "link"
+        # The fake GATT client reports a battery level, so LiNK is not used.
+        assert state.battery_source == "gatt"
+        assert state.raw["link:battery"] == (23).to_bytes(2, "little")
         assert state.link_snapshot == {
             "battery_percentage": 23,
             "dry_bulb_temp": 20.5,
