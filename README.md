@@ -138,13 +138,11 @@ uv pip install --python .venv/bin/python homeassistant pytest-homeassistant-cust
 The protocol library has no Home Assistant dependency and can be exercised on
 its own with `scripts/probe_kestrel.py`.
 
-## Acknowledgements
+## Licensing
 
-Protocol details come from Nielsen-Kellerman's LiNK developer documentation,
-obtained through NK's developer documentation request process. The documents
-are proprietary; this repository contains only the numeric constants and
-behaviour needed to interoperate.
-
-## License
-
-MIT
+The code is released under the MIT License (`LICENSE`). Protocol details come
+from Nielsen-Kellerman's LiNK developer documentation, obtained through NK's
+developer documentation request process; those documents are proprietary and
+are not part of this repository, and the Kestrel name and logo remain NK's
+trademarks. See `NOTICE.md` for the full statement. This project is not
+affiliated with or endorsed by Nielsen-Kellerman Co.

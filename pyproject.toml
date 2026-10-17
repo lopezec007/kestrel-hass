@@ -1,6 +1,6 @@
 [project]
 name = "kestrel-hass"
-version = "0.1.0"
+version = "1.0.0"
 description = "Home Assistant integration for Kestrel (Nielsen-Kellerman) Bluetooth weather instruments"
 readme = "README.md"
 requires-python = ">=3.13"
