@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable
 import copy
-from datetime import datetime
+from datetime import UTC, datetime
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -140,6 +140,9 @@ class KestrelBleDevice:
         await self.profile.read_state(client, self.state)
         if self.use_link_clock:
             self.state.device_time = await self._read_link_clock(client)
+            # The LiNK session can take a while on a weak link; stamp the
+            # state when the clock was actually read.
+            self.state.updated_at = datetime.now(UTC)
         return self.state
 
     async def _with_link[T](
