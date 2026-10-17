@@ -22,9 +22,13 @@ adjusted), [ ] still open.
       altitude (humidity ratio / moisture content are absent on the D3).
 - [x] Station pressure raw × 0.1 gives hPa (856.4 hPa at a ~1500 m site).
 - [x] Barometric pressure is not implemented on the DROP 3 (status byte stays
-      0 even with a 1525 m reference altitude), matching NK's per-model table.
+      0 even with a 1525 m reference altitude and the app in "Barometer" mode;
+      the app computes it). The integration derives it with the hypsometric
+      formula instead.
 - [!] Density altitude exponent is −1 (raw 19275 → 1927.5 m), not −2.
-- [x] Battery Service 0x2A19 readable (100 % and 50 %).
+- [!] Battery Service 0x2A19 is readable but only reports coarse steps that
+      flip between 100 % and 50 % on the same unit; the Kestrel app's value
+      comes from LiNK Get Battery Level (20), which the integration now prefers.
 - [!] Date/Time characteristic order is second, minute, hour, day, month,
       year (LE). It is a plain register: reads return the last written value
       and never advance. The running clock is behind LiNK Get/Set Time (14/15).

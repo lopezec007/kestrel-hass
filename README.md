@@ -59,8 +59,8 @@ Options (gear icon on the integration entry):
 
 | Entity | Type | Notes |
 |---|---|---|
-| Temperature, Relative humidity, Heat index, Dew point, Wet bulb temperature, Delta T, Station pressure, Barometric pressure, Density altitude, Humidity ratio, Moisture content, Relative air density, THI (NRC), THI (Yousef) | sensor | Only the measurements present on your model are created (a DROP D3 provides temperature, humidity, heat index, dew point, station pressure and density altitude). Values are reported in metric; Home Assistant converts to your unit system. |
-| Battery | sensor (diagnostic) | From the standard Battery Service. |
+| Temperature, Relative humidity, Heat index, Dew point, Wet bulb temperature, Delta T, Station pressure, Barometric pressure, Density altitude, Humidity ratio, Moisture content, Relative air density, THI (NRC), THI (Yousef) | sensor | Only the measurements present on your model are created (a DROP D3 provides temperature, humidity, heat index, dew point, station pressure and density altitude; barometric pressure is then calculated from station pressure, temperature and the reference altitude, exactly as the Kestrel app does in "Barometer" mode). Values are reported in metric; Home Assistant converts to your unit system. |
+| Battery | sensor (diagnostic) | Read over LiNK (the value the Kestrel app shows); the standard Battery Service only reports coarse steps and is used as a fallback. |
 | Device time | sensor (diagnostic) | The DROP's running clock, read over LiNK on every poll. Use *Sync time* if it drifts. |
 | Signal strength | sensor (diagnostic, disabled) | RSSI of the last advertisement. |
 | Log interval | select | 2 s … 12 h or Off. |

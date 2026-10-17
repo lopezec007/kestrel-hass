@@ -260,6 +260,7 @@ class Measurement:
     enabled: bool = True
     valid: bool = True
     raw: bytes = b""
+    derived: bool = False  # computed by the library, not read from the device
 
 
 @dataclass(slots=True)
@@ -321,6 +322,7 @@ class DeviceState:
     name: str | None = None  # device name characteristic / advertised name
     info: DeviceInfo = field(default_factory=DeviceInfo)
     battery_percent: int | None = None
+    battery_source: str | None = None  # "link" or "gatt"
     device_time: datetime | None = None  # naive, in the device's local time
     measurements: dict[MeasurementKind, Measurement] = field(default_factory=dict)
     settings: DropSettings | KestrelSettings | None = None

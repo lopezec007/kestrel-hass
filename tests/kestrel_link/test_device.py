@@ -170,6 +170,7 @@ async def test_link_clock_read_and_sync() -> None:
     dev = KestrelBleDevice(ADDR, DeviceFamily.DROP, ble_device=_ble_device())
     link = MagicMock()
     link.get_time = AsyncMock(return_value=datetime(2026, 10, 17, 12, 44, 22))
+    link.get_battery = AsyncMock(return_value=23)
     link.set_time = AsyncMock()
     transport = MagicMock()
     transport.start = AsyncMock()
@@ -187,6 +188,8 @@ async def test_link_clock_read_and_sync() -> None:
     ):
         state = await dev.async_poll()
         assert state.device_time == datetime(2026, 10, 17, 12, 44, 22)
+        assert state.battery_percent == 23
+        assert state.battery_source == "link"
         transport.start.assert_awaited()
         transport.stop.assert_awaited()
 
@@ -207,3 +210,4 @@ async def test_link_clock_failure_is_tolerated() -> None:
         state = await dev.async_poll()  # fake client has no Mass Transfer service
     assert state.device_time is None
     assert state.battery_percent is not None
+    assert state.battery_source == "gatt"

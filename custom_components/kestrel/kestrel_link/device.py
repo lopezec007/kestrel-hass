@@ -13,6 +13,7 @@ from bleak.exc import BleakError as _BleakError
 
 from .client import LinkClient
 from .const import DeviceFamily
+from .derived import add_derived_measurements
 from .models import model_from_code
 from .profiles import DeviceProfile, ProfileCommand, get_profile
 from .transport import LinkTransport
@@ -138,11 +139,15 @@ class KestrelBleDevice:
             self._info_loaded = True
             self._fill_info_fallbacks()
         await self.profile.read_state(client, self.state)
+        self.state.battery_source = (
+            "gatt" if self.state.battery_percent is not None else None
+        )
         if self.use_link_clock:
-            self.state.device_time = await self._read_link_clock(client)
+            await self._read_link_status(client)
             # The LiNK session can take a while on a weak link; stamp the
-            # state when the clock was actually read.
+            # state when it actually finished.
             self.state.updated_at = datetime.now(UTC)
+        add_derived_measurements(self.state)
         return self.state
 
     async def _with_link[T](
@@ -156,13 +161,34 @@ class KestrelBleDevice:
         finally:
             await transport.stop()
 
-    async def _read_link_clock(self, client: BleakClient) -> datetime | None:
-        """Read the running device clock over LiNK; None if unavailable."""
+    async def _read_link_status(self, client: BleakClient) -> None:
+        """Read the running clock and battery level over LiNK (best effort).
+
+        The DROP's Battery Service characteristic only reports coarse steps,
+        whereas LiNK Get Battery Level returns the percentage the Kestrel app
+        shows, so the LiNK value is preferred when available.
+        """
+
+        async def _read(link: LinkClient) -> tuple[datetime | None, int | None]:
+            clock = await link.get_time()
+            try:
+                battery: int | None = await link.get_battery()
+            except KestrelError as err:
+                _LOGGER.debug("%s: LiNK battery read failed: %s", self.address, err)
+                battery = None
+            return clock, battery
+
         try:
-            return await self._with_link(client, lambda link: link.get_time())
+            clock, battery = await self._with_link(client, _read)
         except (*BLEAK_EXCEPTIONS, KestrelError, AttributeError, TypeError) as err:
-            _LOGGER.debug("%s: LiNK clock read failed: %s", self.address, err)
-            return None
+            _LOGGER.debug("%s: LiNK status read failed: %s", self.address, err)
+            self.state.device_time = None
+            return
+        self.state.device_time = clock
+        if battery is not None and 0 <= battery <= 100:
+            self.state.raw["link:battery"] = battery.to_bytes(2, "little")
+            self.state.battery_percent = battery
+            self.state.battery_source = "link"
 
     async def async_poll(self, *, rssi: int | None = None) -> DeviceState:
         """Connect, read everything, disconnect, and return a state snapshot."""
