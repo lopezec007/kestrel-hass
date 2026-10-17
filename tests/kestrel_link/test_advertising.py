@@ -1,6 +1,7 @@
 """Tests for advertisement parsing."""
 
 from custom_components.kestrel.kestrel_link.advertising import (
+    clean_local_name,
     is_kestrel_advertisement,
     parse_advertisement,
     parse_manufacturer_data,
@@ -84,3 +85,21 @@ def test_parse_manufacturer_data_edge_cases() -> None:
     assert parse_manufacturer_data(b"") == (None, None)
     assert parse_manufacturer_data(bytearray(b"\x28\x02\x7e\x00")) == (552, 126)
     assert parse_manufacturer_data(b"\x28\x02\xff\xff\x00\x00") == (552, None)
+
+
+def test_real_drop3_advertisement_with_nul_padding() -> None:
+    """A capture from a real DROP D3: NUL-padded name, model 552, no event."""
+    name = "D3 - 3103865" + "\x00" * 9
+    adv = parse_advertisement(
+        name,
+        {234: bytes.fromhex("2802ffff")},
+        ["12630000-cc25-497d-9854-9b6c02c77054"],
+    )
+    assert adv is not None
+    assert adv.model_code == 552
+    assert adv.family is DeviceFamily.DROP
+    assert adv.event_field is None
+    assert adv.local_name == "D3 - 3103865"
+    assert adv.model is not None and adv.model.name == "Kestrel DROP D3"
+    assert clean_local_name("\x00\x00") is None
+    assert clean_local_name(None) is None

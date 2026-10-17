@@ -18,6 +18,18 @@ from .uuids import SERVICE_FAMILIES
 LE: Final[Literal["little"]] = "little"
 
 
+def clean_local_name(local_name: str | None) -> str | None:
+    """Strip the NUL padding Kestrel devices append to their advertised name.
+
+    A DROP fills the 21-byte Complete Local Name field, so a name such as
+    ``"D3 - 3103865"`` arrives followed by nine NUL bytes.
+    """
+    if local_name is None:
+        return None
+    cleaned = local_name.replace("\x00", "").strip()
+    return cleaned or None
+
+
 def _has_nk_service(service_uuids: Iterable[str]) -> bool:
     return any(uuid.lower() in SERVICE_FAMILIES for uuid in service_uuids)
 
@@ -49,6 +61,7 @@ def parse_advertisement(
     """Parse an advertisement; return None if it is not an NK device."""
     manufacturer_data = manufacturer_data or {}
     uuids = [u.lower() for u in (service_uuids or [])]
+    local_name = clean_local_name(local_name)
 
     nk_payload = manufacturer_data.get(NK_COMPANY_ID)
     has_nk_service = _has_nk_service(uuids)

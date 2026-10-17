@@ -24,6 +24,7 @@ from .conftest import (
     SPEEDCOACH_SERVICE_INFO,
     FakeKestrelBleDevice,
     inject_bluetooth_service_info,
+    make_service_info,
 )
 
 
@@ -157,3 +158,20 @@ async def test_options_flow(
     # Reload created a new device wrapper and polled again.
     assert mock_device.async_poll.await_count == 1
     assert entry.runtime_data.poll_interval == 120
+
+
+async def test_bluetooth_discovery_title_strips_nul_padding(
+    hass: HomeAssistant, mock_bluetooth: None
+) -> None:
+    """The flow title must not carry the DROP's NUL padding."""
+    info = make_service_info(name="D3 - 3103865" + "\x00" * 9)
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_BLUETOOTH}, data=info
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "bluetooth_confirm"
+    flow = hass.config_entries.flow.async_get(result["flow_id"])
+    assert flow["context"]["title_placeholders"]["name"] == "D3 - 3103865"
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["title"] == "D3 - 3103865"

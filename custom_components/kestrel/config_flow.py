@@ -37,7 +37,7 @@ from .const import (
     MAX_POLL_INTERVAL,
     MIN_POLL_INTERVAL,
 )
-from .kestrel_link.advertising import parse_advertisement
+from .kestrel_link.advertising import clean_local_name, parse_advertisement
 from .kestrel_link.const import WEATHER_FAMILIES
 from .kestrel_link.types import NKAdvertisement
 
@@ -54,8 +54,9 @@ def _parse(info: BluetoothServiceInfoBleak) -> NKAdvertisement | None:
 
 def _title(info: BluetoothServiceInfoBleak, adv: NKAdvertisement) -> str:
     """Build a human readable title for a discovered device."""
-    if info.name and info.name != info.address:
-        return info.name
+    name = clean_local_name(info.name)
+    if name and name != info.address:
+        return name
     if (model := adv.model) is not None:
         return f"{model.name} {info.address}"
     return f"Kestrel {info.address}"
