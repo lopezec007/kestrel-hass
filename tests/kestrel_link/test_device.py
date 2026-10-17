@@ -151,7 +151,7 @@ async def test_write_settings_command_and_time() -> None:
         await dev.async_set_time(when)
         assert client.writes[-1] == (
             uuids.DROP_DATETIME_UUID,
-            b"\xea\x07\x0a\x11\x0c\x00\x00",
+            b"\x00\x00\x0c\x11\x0a\xea\x07",
             True,
         )
         assert dev.state.device_time == when

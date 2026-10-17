@@ -129,6 +129,7 @@ class KestrelBleDevice:
         if not self._info_loaded:
             await self.profile.read_device_info(client, self.state)
             self._info_loaded = True
+            self._fill_info_fallbacks()
         await self.profile.read_state(client, self.state)
         return self.state
 
@@ -168,6 +169,23 @@ class KestrelBleDevice:
 
         await self.async_run(_do)
         self.state.device_time = target.replace(tzinfo=None)
+
+    def _fill_info_fallbacks(self) -> None:
+        """Derive identity fields the device did not expose over GATT.
+
+        DROP units do not answer Device Information Service reads, but their
+        advertised name is ``"<model> - <serial>"``.
+        """
+        info = self.state.info
+        name = self.state.name or self.name
+        if info.serial_number is None and name and " - " in name:
+            serial = name.rsplit(" - ", 1)[1].strip()
+            if serial:
+                info.serial_number = serial
+        if info.model_number is None and self.state.model is not None:
+            info.model_number = self.state.model.name
+        if info.manufacturer is None:
+            info.manufacturer = "Nielsen-Kellerman"
 
     def snapshot(self) -> DeviceState:
         """Return a deep copy of the current state."""

@@ -100,10 +100,31 @@ def _gatt_exceptions() -> tuple[type[BaseException], ...]:
     return (BleakError, OSError, TimeoutError)
 
 
+def _resolve_char(client: GattClient, uuid: str) -> Any:
+    """Return a characteristic object for ``uuid`` if the client exposes services.
+
+    DROP firmware advertises some Device Information characteristics twice;
+    bleak then refuses a plain UUID lookup ("Multiple Characteristics with
+    this UUID"), so the first matching characteristic from the service tree is
+    used instead.  Falls back to the UUID string when services are unknown.
+    """
+    services = getattr(client, "services", None)
+    if services is None:
+        return uuid
+    try:
+        for service in services:
+            for char in service.characteristics:
+                if char.uuid.lower() == uuid:
+                    return char
+    except (AttributeError, TypeError):  # pragma: no cover - exotic clients
+        return uuid
+    return uuid
+
+
 async def _read_optional(client: GattClient, uuid: str) -> bytes | None:
     """Read a characteristic, returning None if it is missing or unreadable."""
     try:
-        return bytes(await client.read_gatt_char(uuid))
+        return bytes(await client.read_gatt_char(_resolve_char(client, uuid)))
     except _gatt_exceptions() as err:
         _LOGGER.debug("Characteristic %s not readable: %s", uuid, err)
         return None

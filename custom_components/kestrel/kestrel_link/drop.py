@@ -69,8 +69,10 @@ DROP_MEASUREMENT_CHARS: dict[int, DropMeasurementSpec] = {
     0x0009: DropMeasurementSpec(
         MeasurementKind.PRESSURE_TREND, False, -4, NativeUnit.HPA
     ),
+    # NK's DROP table lists exponent -2, but real D3 units report tenths of a
+    # metre (raw 19275 at a 856 hPa site is 1927.5 m), matching the K5 layout.
     0x000A: DropMeasurementSpec(
-        MeasurementKind.DENSITY_ALTITUDE, True, -2, NativeUnit.METERS
+        MeasurementKind.DENSITY_ALTITUDE, True, -1, NativeUnit.METERS
     ),
     0x000B: DropMeasurementSpec(
         MeasurementKind.HUMIDITY_RATIO, False, -2, NativeUnit.GRAMS_PER_KG
@@ -270,23 +272,50 @@ def encode_name(name: str, length: int = NAME_LENGTH) -> bytes:
     return data.ljust(length, b"\x00")
 
 
-def decode_sig_datetime(raw: bytes | bytearray | None) -> datetime | None:
-    """Decode a Bluetooth SIG Date Time characteristic (7 bytes)."""
-    if raw is None or len(raw) < DATETIME_LENGTH:
-        return None
-    data = bytes(raw)
-    year = int.from_bytes(data[0:2], LE)
-    month, day, hour, minute, second = data[2:7]
-    if year == 0 or month == 0 or day == 0:
+def _build_datetime(
+    year: int, month: int, day: int, hms: tuple[int, int, int]
+) -> datetime | None:
+    if year < 2000 or year > 2150 or month == 0 or day == 0:
         return None
     try:
-        return datetime(year, month, day, hour, minute, second)
+        return datetime(year, month, day, *hms)
     except ValueError:
         return None
 
 
-def encode_sig_datetime(when: datetime) -> bytes:
-    """Encode a datetime (device-local, tz ignored) as SIG Date Time."""
+def decode_sig_datetime(raw: bytes | bytearray | None) -> datetime | None:
+    """Decode the 7-byte Date/Time characteristic.
+
+    The specification references the SIG Date Time layout (year u16 LE,
+    month, day, hour, minute, second).  Real DROP D3 units (BLE profile 1.25)
+    transmit the fields in the opposite order -- second, minute, hour, day,
+    month, year u16 LE.  Both layouts are accepted; the one yielding a
+    plausible date wins, with the DROP layout tried first.
+    """
+    if raw is None or len(raw) < DATETIME_LENGTH:
+        return None
+    data = bytes(raw[:DATETIME_LENGTH])
+    # DROP order.
+    second, minute, hour, day, month = data[0:5]
+    year = int.from_bytes(data[5:7], LE)
+    if (when := _build_datetime(year, month, day, (hour, minute, second))) is not None:
+        return when
+    # SIG order.
+    year = int.from_bytes(data[0:2], LE)
+    month, day, hour, minute, second = data[2:7]
+    return _build_datetime(year, month, day, (hour, minute, second))
+
+
+def encode_sig_datetime(when: datetime, *, drop_layout: bool = True) -> bytes:
+    """Encode a datetime (device-local, tz ignored) for the Date/Time characteristic.
+
+    ``drop_layout`` selects the field order real DROP units use (see
+    :func:`decode_sig_datetime`); pass False for the SIG order.
+    """
+    if drop_layout:
+        return bytes(
+            [when.second, when.minute, when.hour, when.day, when.month]
+        ) + when.year.to_bytes(2, LE)
     return when.year.to_bytes(2, LE) + bytes(
         [when.month, when.day, when.hour, when.minute, when.second]
     )

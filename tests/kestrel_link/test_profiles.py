@@ -83,7 +83,7 @@ async def test_drop_read_state() -> None:
     assert state.value(MK.RELATIVE_HUMIDITY) == 40.0
     assert state.value(MK.HEAT_INDEX) == 27.75
     assert state.value(MK.STATION_PRESSURE) == 1013.2
-    assert state.value(MK.DENSITY_ALTITUDE) == 123.45
+    assert state.value(MK.DENSITY_ALTITUDE) == 1234.5
     assert state.value(MK.DEW_POINT) is None
     assert state.measurements[MK.DEW_POINT].present is True
     assert state.measurements[MK.WET_BULB_TEMPERATURE].present is False
@@ -159,7 +159,7 @@ async def test_drop_write_settings_command_time_name() -> None:
     await profile.write_time(client, datetime(2026, 10, 17, 14, 30, 5))
     assert client.writes[-1] == (
         uuids.DROP_DATETIME_UUID,
-        b"\xea\x07\x0a\x11\x0e\x1e\x05",
+        b"\x05\x1e\x0e\x11\x0a\xea\x07",
         True,
     )
 

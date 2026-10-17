@@ -38,7 +38,7 @@ def test_negative_temperature() -> None:
         (
             0x000A,
             (-12345).to_bytes(3, "little", signed=True),
-            -123.45,
+            -1234.5,
             NativeUnit.METERS,
         ),
         (0x000B, (123456).to_bytes(3, "little"), 1234.56, NativeUnit.GRAMS_PER_KG),
@@ -173,8 +173,30 @@ def test_button_and_ascii() -> None:
 def test_sig_datetime_round_trip() -> None:
     when = datetime(2013, 1, 1, 0, 0, 1)
     raw = drop.encode_sig_datetime(when)
-    assert raw == b"\xdd\x07\x01\x01\x00\x00\x01"
+    assert raw == b"\x01\x00\x00\x01\x01\xdd\x07"
     assert drop.decode_sig_datetime(raw) == when
+    assert drop.encode_sig_datetime(when, drop_layout=False) == (
+        b"\xdd\x07\x01\x01\x00\x00\x01"
+    )
     assert drop.decode_sig_datetime(b"\x00" * 7) is None
     assert drop.decode_sig_datetime(b"\xdd\x07\x13\x01\x00\x00\x00") is None
+    # SIG order is still accepted.
+    assert (
+        drop.decode_sig_datetime(drop.encode_sig_datetime(when, drop_layout=False))
+        == when
+    )
+
+
+def test_sig_datetime_real_drop_layout() -> None:
+    """Capture from a DROP D3 (BLE profile 1.25): sec, min, hour, day, month, year BE."""
+    raw = bytes.fromhex("351f0e0c0aea07")
+    assert drop.decode_sig_datetime(raw) == datetime(2026, 10, 12, 14, 31, 53)
+    assert drop.encode_sig_datetime(datetime(2026, 10, 12, 14, 31, 53)) == raw
+
+
+def test_density_altitude_uses_tenths_of_metre() -> None:
+    """Capture from a DROP D3 at a 856 hPa site: raw 0x4b4b -> 1927.5 m."""
+    m = drop.parse_drop_measurement_by_short(0x000A, bytes.fromhex("074b4b00"))
+    assert m.value == 1927.5
+    assert m.present and m.valid
     assert drop.decode_sig_datetime(b"\x01") is None
