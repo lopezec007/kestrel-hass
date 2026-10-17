@@ -151,8 +151,11 @@ class LinkClient:
             last_sequence = decode_int(
                 response.end_of_data[:_SEQUENCE_SIZE], signed=False
             )
+        fields = tuple(f for meta in response.metadata for f in meta.fields)
         return DataLogResult(
-            records=response.records(numbered=True), last_sequence=last_sequence
+            records=response.records(numbered=True),
+            last_sequence=last_sequence,
+            fields=fields,
         )
 
     async def erase_data_log(self) -> None:

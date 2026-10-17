@@ -84,7 +84,14 @@ def _resolve_entry(hass: HomeAssistant, device_id: str) -> ConfigEntry:
             translation_key="device_not_found",
             translation_placeholders={"device_id": device_id},
         )
-    for entry_id in device.config_entries:
+    # HA 2026.10 gives a device a single config entry; older releases expose
+    # the (now deprecated) ``config_entries`` set.
+    entry_ids = (
+        [device.config_entry_id]
+        if getattr(device, "config_entry_id", None)
+        else list(device.config_entries)
+    )
+    for entry_id in entry_ids:
         entry = hass.config_entries.async_get_entry(entry_id)
         if entry is None or entry.domain != DOMAIN:
             continue
@@ -189,17 +196,21 @@ async def _async_handle_import_data_log(call: ServiceCall) -> ServiceResponse:
     from .kestrel_link.client import LinkClient  # noqa: PLC0415
     from .kestrel_link.transport import LinkTransport  # noqa: PLC0415
 
-    async def _download(client: Any) -> Any:
+    async def _download(client: Any) -> tuple[Any, Any, int | None]:
         transport = LinkTransport(client)
         await transport.start()
         try:
-            return await LinkClient(transport).get_data_log(after=after)
+            link = LinkClient(transport)
+            device_time = await link.get_time()
+            count = await link.get_data_log_record_count()
+            result = await link.get_data_log(after=after)
         finally:
             await transport.stop()
+        return result, device_time, count
 
     download: Callable[[Any], Coroutine[Any, Any, Any]] = _download
     try:
-        result = await coordinator.device.async_run(download)
+        result, device_time, record_count = await coordinator.device.async_run(download)
     except (*BLEAK_EXCEPTIONS, KestrelError) as err:
         raise HomeAssistantError(
             translation_domain=DOMAIN,
@@ -208,6 +219,12 @@ async def _async_handle_import_data_log(call: ServiceCall) -> ServiceResponse:
         ) from err
 
     records: list[LinkRecord] = result.records
+    _LOGGER.debug(
+        "%s: data log layout %s; first record %s",
+        coordinator.address,
+        [(f.name, f.unit, f.size) for f in getattr(result, "fields", ())],
+        records[0] if records else None,
+    )
     stats = build_statistics(hass, records)
     registry = er.async_get(hass)
     imported: dict[str, int] = {}
@@ -230,6 +247,8 @@ async def _async_handle_import_data_log(call: ServiceCall) -> ServiceResponse:
         "first_record": timestamps[0].isoformat() if timestamps else None,
         "last_record": timestamps[-1].isoformat() if timestamps else None,
         "last_sequence": result.last_sequence,
+        "device_time": device_time.isoformat() if device_time else None,
+        "device_record_count": record_count,
         "statistics": imported,
     }
     _LOGGER.debug("Imported Kestrel data log for %s: %s", coordinator.address, response)

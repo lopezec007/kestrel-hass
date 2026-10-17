@@ -115,26 +115,46 @@ def is_bad_value(raw_int: int, size: int, *, signed: bool) -> bool:
     return pattern == (1 << bits) - 1
 
 
+def _plausible_datetime(
+    year: int, month: int, day: int, hms: tuple[int, int, int]
+) -> datetime | None:
+    if year not in _PLAUSIBLE_YEARS:
+        return None
+    try:
+        return datetime(year, month, day, *hms)
+    except ValueError:
+        return None
+
+
 def decode_bt_datetime(raw: bytes) -> datetime | None:
     """Decode a 7-byte Bluetooth SIG Date Time value.
 
-    The year is little-endian per the SIG specification.  If that reading is
-    implausible but the big-endian reading is plausible, the latter is used,
-    matching NK's worked example.  Returns None for an all-zero or invalid
-    value.
+    Three layouts are recognised, in this order:
+
+    1. SIG order with a little-endian year (the specification).
+    2. The order real Kestrel DROP units use for their clock and log
+       timestamps: second, minute, hour, day, month, year (little-endian).
+    3. SIG order with a big-endian year, matching NK's worked example.
+
+    Returns None for an all-zero or otherwise invalid value.
     """
     if len(raw) < BT_DATETIME_SIZE:
         return None
-    year = raw[0] | (raw[1] << 8)
-    if year not in _PLAUSIBLE_YEARS:
-        alt = (raw[0] << 8) | raw[1]
-        if alt in _PLAUSIBLE_YEARS:
-            year = alt
-    month, day, hour, minute, second = raw[2:7]
-    try:
-        return datetime(year, month, day, hour, minute, second)
-    except ValueError:
-        return None
+    data = bytes(raw[:BT_DATETIME_SIZE])
+    sig_year_le = data[0] | (data[1] << 8)
+    if (
+        when := _plausible_datetime(sig_year_le, data[2], data[3], tuple(data[4:7]))  # type: ignore[arg-type]
+    ) is not None:
+        return when
+    drop_year = data[5] | (data[6] << 8)
+    if (
+        when := _plausible_datetime(
+            drop_year, data[4], data[3], (data[2], data[1], data[0])
+        )
+    ) is not None:
+        return when
+    sig_year_be = (data[0] << 8) | data[1]
+    return _plausible_datetime(sig_year_be, data[2], data[3], tuple(data[4:7]))  # type: ignore[arg-type]
 
 
 def encode_bt_datetime(dt: datetime) -> bytes:

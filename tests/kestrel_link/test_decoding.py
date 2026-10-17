@@ -268,3 +268,13 @@ def test_metadata_accumulator() -> None:
     acc.add(MetadataPacket(DOC_FIELDS[:1], start=True))
     assert acc.layout().fields == DOC_FIELDS[:1]
     assert acc.layout().record_size == 7
+
+
+def test_decode_bt_datetime_drop_layout() -> None:
+    """Real DROP D3 clock bytes: second, minute, hour, day, month, year LE."""
+    assert decode_bt_datetime(bytes.fromhex("351f0e0c0aea07")) == datetime(
+        2026, 10, 12, 14, 31, 53
+    )
+    assert decode_bt_datetime(bytes.fromhex("30090a110aea07")) == datetime(
+        2026, 10, 17, 10, 9, 48
+    )

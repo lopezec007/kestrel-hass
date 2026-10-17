@@ -195,6 +195,7 @@ class DataLogResult:
 
     records: list[LinkRecord]
     last_sequence: int | None  # sequence number reported in End of Data
+    fields: tuple[FieldDescriptor, ...] = ()  # record layout from metadata
 
 
 # --------------------------------------------------------------------------- #

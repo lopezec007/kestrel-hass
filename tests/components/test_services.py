@@ -103,6 +103,8 @@ def _install_fake_link(
         link.get_data_log = AsyncMock(side_effect=result)
     else:
         link.get_data_log = AsyncMock(return_value=result)
+    link.get_time = AsyncMock(return_value=datetime(2026, 10, 17, 10, 9, 48))
+    link.get_data_log_record_count = AsyncMock(return_value=5937)
     return transport, link, coordinator.device.async_run
 
 
@@ -179,6 +181,8 @@ async def test_import_data_log(
         "first_record": "2026-10-17T10:00:00",
         "last_record": "2026-10-17T11:15:00",
         "last_sequence": 1234,
+        "device_time": "2026-10-17T10:09:48",
+        "device_record_count": 5937,
         "statistics": {temp_id: 1, rh_id: 2},
     }
     assert entry.data[CONF_LAST_LOG_SEQUENCE] == 1234
