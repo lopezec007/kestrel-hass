@@ -204,7 +204,7 @@ class KestrelBleDevice:
                 return naive
 
             async def _sync(link: LinkClient) -> datetime | None:
-                await link.set_time(naive)
+                await link.set_time(naive, drop_layout=True)
                 return await link.get_time()
 
             return await self._with_link(client, _sync)

@@ -157,8 +157,17 @@ def decode_bt_datetime(raw: bytes) -> datetime | None:
     return _plausible_datetime(sig_year_be, data[2], data[3], tuple(data[4:7]))  # type: ignore[arg-type]
 
 
-def encode_bt_datetime(dt: datetime) -> bytes:
-    """Encode a datetime as a 7-byte Bluetooth SIG Date Time value."""
+def encode_bt_datetime(dt: datetime, *, drop_layout: bool = False) -> bytes:
+    """Encode a datetime as a 7-byte Date Time value.
+
+    The SIG layout is year (LE), month, day, hour, minute, second.  Kestrel
+    DROP firmware uses the reverse field order with the year still
+    little-endian; pass ``drop_layout=True`` for it.
+    """
+    if drop_layout:
+        return struct.pack(
+            "<BBBBBH", dt.second, dt.minute, dt.hour, dt.day, dt.month, dt.year
+        )
     return struct.pack(
         "<HBBBBB", dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second
     )

@@ -59,7 +59,7 @@ Options (gear icon on the integration entry):
 
 | Entity | Type | Notes |
 |---|---|---|
-| Temperature, Relative humidity, Heat index, Dew point, Wet bulb temperature, Delta T, Station pressure, Barometric pressure, Density altitude, Humidity ratio, Moisture content, Relative air density, THI (NRC), THI (Yousef) | sensor | Only the measurements present on your model are created. Values are reported in metric; Home Assistant converts to your unit system. |
+| Temperature, Relative humidity, Heat index, Dew point, Wet bulb temperature, Delta T, Station pressure, Barometric pressure, Density altitude, Humidity ratio, Moisture content, Relative air density, THI (NRC), THI (Yousef) | sensor | Only the measurements present on your model are created (a DROP D3 provides temperature, humidity, heat index, dew point, station pressure and density altitude). Values are reported in metric; Home Assistant converts to your unit system. |
 | Battery | sensor (diagnostic) | From the standard Battery Service. |
 | Device time | sensor (diagnostic) | The DROP's running clock, read over LiNK on every poll. Use *Sync time* if it drifts. |
 | Signal strength | sensor (diagnostic, disabled) | RSSI of the last advertisement. |

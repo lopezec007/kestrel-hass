@@ -192,7 +192,9 @@ async def test_link_clock_read_and_sync() -> None:
 
         link.get_time = AsyncMock(return_value=datetime(2026, 10, 17, 10, 30, 0))
         result = await dev.async_set_time(datetime(2026, 10, 17, 10, 30, 0))
-        link.set_time.assert_awaited_once_with(datetime(2026, 10, 17, 10, 30, 0))
+        link.set_time.assert_awaited_once_with(
+            datetime(2026, 10, 17, 10, 30, 0), drop_layout=True
+        )
         assert result == datetime(2026, 10, 17, 10, 30, 0)
         assert dev.state.device_time == result
 

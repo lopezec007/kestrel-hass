@@ -278,3 +278,11 @@ def test_decode_bt_datetime_drop_layout() -> None:
     assert decode_bt_datetime(bytes.fromhex("30090a110aea07")) == datetime(
         2026, 10, 17, 10, 9, 48
     )
+
+
+def test_encode_bt_datetime_drop_layout_round_trips() -> None:
+    when = datetime(2026, 10, 17, 13, 5, 14)
+    raw = encode_bt_datetime(when, drop_layout=True)
+    assert raw == bytes.fromhex("0e050d110aea07")
+    assert decode_bt_datetime(raw) == when
+    assert decode_bt_datetime(encode_bt_datetime(when)) == when

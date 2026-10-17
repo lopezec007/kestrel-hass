@@ -96,12 +96,21 @@ class LinkClient:
                 if command.command == CommandCode.SET_TIME:
                     raw = command.parameters
                     break
-        return decode_bt_datetime(raw) if raw else None
+        when = decode_bt_datetime(raw) if raw else None
+        if when is None:
+            _LOGGER.debug("Get Time returned undecodable clock bytes: %s", raw.hex())
+        return when
 
-    async def set_time(self, when: datetime) -> None:
-        """Set the device clock."""
+    async def set_time(self, when: datetime, *, drop_layout: bool = False) -> None:
+        """Set the device clock.
+
+        ``drop_layout`` encodes the fields in the order DROP firmware expects
+        (second, minute, hour, day, month, year LE) instead of the SIG order.
+        """
         await self._transport.send_command(
-            CommandCode.SET_TIME, encode_bt_datetime(when), expect_data=False
+            CommandCode.SET_TIME,
+            encode_bt_datetime(when, drop_layout=drop_layout),
+            expect_data=False,
         )
 
     async def get_battery(self) -> int:

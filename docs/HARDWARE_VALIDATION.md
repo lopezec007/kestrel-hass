@@ -21,14 +21,16 @@ adjusted), [ ] still open.
 - [x] Value widths: 2 bytes for most, 3 bytes for heat stress index and density
       altitude (humidity ratio / moisture content are absent on the D3).
 - [x] Station pressure raw × 0.1 gives hPa (856.4 hPa at a ~1500 m site).
-      Barometric pressure is absent until a reference altitude is set.
+- [x] Barometric pressure is not implemented on the DROP 3 (status byte stays
+      0 even with a 1525 m reference altitude), matching NK's per-model table.
 - [!] Density altitude exponent is −1 (raw 19275 → 1927.5 m), not −2.
 - [x] Battery Service 0x2A19 readable (100 % and 50 %).
 - [!] Date/Time characteristic order is second, minute, hour, day, month,
       year (LE). It is a plain register: reads return the last written value
       and never advance. The running clock is behind LiNK Get/Set Time (14/15).
-- [x] Settings characteristic reads real values; a write with ignore sentinels
-      changed only the log interval (12 h → 10 min → 12 h) and left the rest.
+- [x] Settings characteristic reads real values; writes with ignore sentinels
+      changed only the intended field (log interval 12 h → 10 min → 12 h;
+      reference altitude 0 → 1525 m) and left the rest.
 - [x] Commands characteristic: blink LED accepted (write acknowledged).
 - [x] Name characteristic readable.
 - [!] Device Information characteristics are duplicated in the GATT table, so
@@ -49,6 +51,6 @@ adjusted), [ ] still open.
 ## Behaviour
 - [x] A poll takes about 6 s (2.3 s connect, 4.5 s reads). Effect on the
       phone app not checked.
-- [ ] Does the LiNK clock keep time after Set Time (it read 2 h 15 min ahead
-      before the LiNK-based sync was implemented)?
+- [x] The LiNK clock runs: both units read the correct local time to the
+      second on successive polls, and LiNK Set Time reads straight back.
 - [ ] Battery drain at the default 5-minute poll interval over a week.
