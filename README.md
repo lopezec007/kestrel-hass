@@ -5,9 +5,9 @@ weather instruments. The first release targets the **Kestrel DROP** family
 (D1, D1 Probe, D2, D2 AG, D3, D3 Fire); the protocol library is structured so
 the Kestrel 5000 / 7000 / 3550 meters can be added by implementing one profile.
 
-> Status: the DROP code path is complete and unit-tested against the worked
-> examples in NK's protocol documentation. Validation against physical DROPs is
-> in progress; see [Hardware validation](#hardware-validation).
+> Status: validated against two Kestrel DROP D3 units (firmware 1.61, BLE
+> profile 1.25): discovery, all measurements, settings writes, identify, time
+> sync and the LiNK data-log import. See [Hardware validation](#hardware-validation).
 
 ## Features
 
@@ -60,21 +60,45 @@ Options (gear icon on the integration entry):
 |---|---|---|
 | Temperature, Relative humidity, Heat index, Dew point, Wet bulb temperature, Delta T, Station pressure, Barometric pressure, Density altitude, Humidity ratio, Moisture content, Relative air density, THI (NRC), THI (Yousef) | sensor | Only the measurements present on your model are created. Values are reported in metric; Home Assistant converts to your unit system. |
 | Battery | sensor (diagnostic) | From the standard Battery Service. |
-| Device time | sensor (diagnostic) | The DROP's internal clock. Use *Sync time* if it drifts. |
+| Device time | sensor (diagnostic) | The DROP's running clock, read over LiNK on every poll. Use *Sync time* if it drifts. |
 | Signal strength | sensor (diagnostic, disabled) | RSSI of the last advertisement. |
 | Log interval | select | 2 s … 12 h or Off. |
 | Transmission rate | number | 2–60 s between live notifications (used by the Kestrel LiNK app). |
 | Reference altitude | number | Metres; used by the DROP to derive barometric pressure from station pressure. |
 | Wrap log | switch | Overwrite the oldest log records when the memory is full. |
 | Identify | button | Blinks the LED. |
-| Sync time | button | Writes Home Assistant's local time to the device. |
+| Sync time | button | Sets the device clock to Home Assistant's local time (GATT characteristic and LiNK Set Time). |
 | Erase log | button (disabled) | Clears the on-device data log. |
+
+### Units
+
+Measurements are read in the metric units the device transmits and declared
+with Home Assistant device classes, so they are converted to your configured
+unit system automatically (°F, inHg, ft on an imperial system). To change the
+unit of one sensor, open the entity's settings (gear icon) and pick a *Unit of
+measurement*; this works for temperatures, pressures, altitudes and speeds.
+Statistics imported by `kestrel.import_data_log` follow the same conversion.
+
+### Importing the on-device data log
+
+The `kestrel.import_data_log` action downloads the log over NK's LiNK protocol
+and stores hourly mean/min/max long-term statistics on the device's sensors
+(visible in History and Statistics graphs). Mode *New records only* resumes
+from the last imported sequence number; *Entire log* re-reads everything. The
+transfer runs at roughly 20 records per second, so a full 6,000-record log
+takes about five minutes, during which the device stays connected and regular
+polls wait.
+
+Timestamps come from the device clock. On the DROP the GATT Date/Time
+characteristic is a plain register (it returns whatever was last written), so
+the integration reads and sets the real clock through LiNK; press *Sync time*
+once if the imported history looks shifted.
 
 ## Hardware validation
 
-The integration was written from NK's protocol documents and validated with
-their worked packet examples. Items still to confirm against real devices are
-tracked in `docs/HARDWARE_VALIDATION.md`. `scripts/probe_kestrel.py` is a
+The integration was written from NK's protocol documents and then validated
+on two DROP D3 units; findings and remaining open items are tracked in
+`docs/HARDWARE_VALIDATION.md`. `scripts/probe_kestrel.py` is a
 standalone `bleak` tool that scans for devices, dumps a DROP's GATT profile and
 exercises the LiNK protocol so that fixtures can be captured from real units.
 

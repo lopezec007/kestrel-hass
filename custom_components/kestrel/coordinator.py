@@ -185,7 +185,9 @@ class KestrelCoordinator(ActiveBluetoothDataUpdateCoordinator[DeviceState]):
     async def async_set_time(self, when: datetime | None = None) -> None:
         """Set the device clock to ``when`` (default: now, local time)."""
         when = when or dt_util.now()
-        await self.device.async_set_time(when)
+        device_time = await self.device.async_set_time(when)
         if self.data is not None:
-            self.data.device_time = when.replace(tzinfo=None, microsecond=0)
+            self.data.device_time = device_time or when.replace(
+                tzinfo=None, microsecond=0
+            )
             self.async_update_listeners()

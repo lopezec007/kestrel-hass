@@ -11,9 +11,11 @@ from typing import TYPE_CHECKING, Any
 
 from bleak.exc import BleakError as _BleakError
 
+from .client import LinkClient
 from .const import DeviceFamily
 from .models import model_from_code
 from .profiles import DeviceProfile, ProfileCommand, get_profile
+from .transport import LinkTransport
 from .types import DeviceState, DropSettings, KestrelError, KestrelSettings
 
 if TYPE_CHECKING:
@@ -56,6 +58,11 @@ class KestrelBleDevice:
         self._max_attempts = max_attempts
         self._lock = asyncio.Lock()
         self._info_loaded = False
+        # DROP firmware treats the GATT Date/Time characteristic as a plain
+        # register: it returns whatever was last written and never advances.
+        # The running clock is only reachable through the LiNK Get/Set Time
+        # commands, so the DROP profile reads/sets the clock over LiNK.
+        self.use_link_clock = family is DeviceFamily.DROP
         self.state: DeviceState = DeviceState(
             address=address,
             family=family,
@@ -131,7 +138,28 @@ class KestrelBleDevice:
             self._info_loaded = True
             self._fill_info_fallbacks()
         await self.profile.read_state(client, self.state)
+        if self.use_link_clock:
+            self.state.device_time = await self._read_link_clock(client)
         return self.state
+
+    async def _with_link[T](
+        self, client: BleakClient, fn: Callable[[LinkClient], Awaitable[T]]
+    ) -> T:
+        """Run ``fn`` with a LiNK client over the Mass Transfer Service."""
+        transport = LinkTransport(client)
+        await transport.start()
+        try:
+            return await fn(LinkClient(transport))
+        finally:
+            await transport.stop()
+
+    async def _read_link_clock(self, client: BleakClient) -> datetime | None:
+        """Read the running device clock over LiNK; None if unavailable."""
+        try:
+            return await self._with_link(client, lambda link: link.get_time())
+        except (*BLEAK_EXCEPTIONS, KestrelError, AttributeError, TypeError) as err:
+            _LOGGER.debug("%s: LiNK clock read failed: %s", self.address, err)
+            return None
 
     async def async_poll(self, *, rssi: int | None = None) -> DeviceState:
         """Connect, read everything, disconnect, and return a state snapshot."""
@@ -160,15 +188,30 @@ class KestrelBleDevice:
 
         await self.async_run(_do)
 
-    async def async_set_time(self, when: datetime | None = None) -> None:
-        """Set the device clock; defaults to the current local time."""
+    async def async_set_time(self, when: datetime | None = None) -> datetime | None:
+        """Set the device clock; defaults to the current local time.
+
+        Writes the GATT Date/Time characteristic and, for families whose
+        running clock lives behind LiNK, also issues Set Time over LiNK and
+        reads the clock back.  Returns the device's clock after the write.
+        """
         target = when if when is not None else datetime.now().astimezone()
+        naive = target.replace(tzinfo=None, microsecond=0)
 
-        async def _do(client: BleakClient) -> None:
-            await self.profile.write_time(client, target)
+        async def _do(client: BleakClient) -> datetime | None:
+            await self.profile.write_time(client, naive)
+            if not self.use_link_clock:
+                return naive
 
-        await self.async_run(_do)
-        self.state.device_time = target.replace(tzinfo=None)
+            async def _sync(link: LinkClient) -> datetime | None:
+                await link.set_time(naive)
+                return await link.get_time()
+
+            return await self._with_link(client, _sync)
+
+        result = await self.async_run(_do)
+        self.state.device_time = result if result is not None else naive
+        return self.state.device_time
 
     def _fill_info_fallbacks(self) -> None:
         """Derive identity fields the device did not expose over GATT.

@@ -1,39 +1,54 @@
 # Hardware validation checklist
 
-Items derived from the documentation that need confirming on real devices.
-Tick them off with `scripts/probe_kestrel.py` output attached to the PR.
+Items derived from the documentation, checked against two Kestrel DROP D3 units
+(serials 3103865 and 3116707, firmware 1.61, hardware Rev 11A2, BLE profile
+1.25) on 2026-10-17 through a Home Assistant 2026.10.1 host adapter.
+
+Legend: [x] confirmed as documented, [!] differs from the documentation (code
+adjusted), [ ] still open.
 
 ## Advertising / discovery
-- [ ] DROP advertises continuously (not only after a button press) so the
-      coordinator's advertisement-driven polling and availability work.
-- [ ] Scan response carries manufacturer id `0x00EA` with `[model_code][event]`
-      and the DROP service UUID `12630000-cc25-497d-9854-9b6c02c77054`.
-- [ ] Observed model codes for the two test units (expected 550–555).
+- [x] DROP advertises continuously; the payload is static, so HA only fires
+      the advertisement callback once and the coordinator's timer fallback
+      drives polling.
+- [x] Scan response carries manufacturer id `0x00EA` with `[model_code][event]`
+      (`2802ffff`) and the DROP service UUID.
+- [!] The Complete Local Name is NUL-padded to 21 bytes (`"D3 - 3103865\0..."`).
+- [x] Both units report model code 552 (DROP 3).
 
 ## GATT profile (DropProfile)
-- [ ] Status byte semantics (bit0 present, bit1 enabled, bit2 valid) match.
-- [ ] Measurement value widths: 2 bytes for most, 3 bytes for heat stress
-      index, density altitude, humidity ratio and moisture content.
-- [ ] Station/barometric pressure scale: raw × 0.1 gives hPa (doc labels the
-      unit "Bar" but the resolution table says 0.1 hPa).
-- [ ] Density altitude exponent: doc says −2 for the DROP (−1 on the K5).
-- [ ] Battery Service 0x2A19 readable.
-- [ ] Date/Time characteristic byte order (SIG little-endian year).
-- [ ] Settings characteristic: reading returns real values, and a write with
-      ignore sentinels only changes the intended field.
-- [ ] Commands characteristic: blink LED works; verify the device does **not**
-      react to zero bytes.
-- [ ] Name characteristic is readable and NUL-padded.
+- [x] Status byte semantics match; absent measurements read `00 00 00`.
+- [x] Value widths: 2 bytes for most, 3 bytes for heat stress index and density
+      altitude (humidity ratio / moisture content are absent on the D3).
+- [x] Station pressure raw × 0.1 gives hPa (856.4 hPa at a ~1500 m site).
+      Barometric pressure is absent until a reference altitude is set.
+- [!] Density altitude exponent is −1 (raw 19275 → 1927.5 m), not −2.
+- [x] Battery Service 0x2A19 readable (100 % and 50 %).
+- [!] Date/Time characteristic order is second, minute, hour, day, month,
+      year (LE). It is a plain register: reads return the last written value
+      and never advance. The running clock is behind LiNK Get/Set Time (14/15).
+- [x] Settings characteristic reads real values; a write with ignore sentinels
+      changed only the log interval (12 h → 10 min → 12 h) and left the rest.
+- [x] Commands characteristic: blink LED accepted (write acknowledged).
+- [x] Name characteristic readable.
+- [!] Device Information characteristics are duplicated in the GATT table, so
+      UUID lookups are ambiguous; resolved through the service tree
+      ("Kestrel by NK", "Kestrel DROP 3", serial, "Rev 11A2", "1.61").
 
 ## LiNK / Mass Transfer
-- [ ] Mass Transfer characteristic UUIDs: `85920001`/`85920002` vs the swapped
-      `85920100`/`85920200` reading of the NK note (transport picks by property).
-- [ ] 20-byte zero-padded chunking and indication acks behave as documented.
-- [ ] `Get Data Snapshot` returns Metadata Start + Data + End of Data.
-- [ ] `Get Data Log` packet numbering and End of Data sequence parameter.
-- [ ] BT Date Time year byte order in log records.
+- [x] Mass Transfer service located and characteristics selected by property;
+      a full Get Data Log transfer (5,937 records, 742 packets) completed.
+- [x] 20-byte zero-padded chunking and per-packet acks behave as documented.
+- [ ] `Get Data Snapshot` (not exercised yet; Get Data Log uses the same
+      metadata/data flow and worked).
+- [x] `Get Data Log` packet numbering and End of Data sequence parameter
+      (last sequence 25593, record count matches command 2).
+- [!] Log record timestamps use the DROP order (second first, year LE last),
+      same as the clock characteristic.
 
 ## Behaviour
-- [ ] Connection time per poll and effect on the phone app (the DROP accepts a
-      single central at a time).
+- [x] A poll takes about 6 s (2.3 s connect, 4.5 s reads). Effect on the
+      phone app not checked.
+- [ ] Does the LiNK clock keep time after Set Time (it read 2 h 15 min ahead
+      before the LiNK-based sync was implemented)?
 - [ ] Battery drain at the default 5-minute poll interval over a week.

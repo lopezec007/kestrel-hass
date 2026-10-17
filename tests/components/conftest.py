@@ -218,7 +218,7 @@ class FakeKestrelBleDevice:
         self.async_poll = AsyncMock(side_effect=self._poll)
         self.async_write_settings = AsyncMock(side_effect=self._write_settings)
         self.async_send_command = AsyncMock()
-        self.async_set_time = AsyncMock()
+        self.async_set_time = AsyncMock(return_value=None)
 
     async def _poll(self) -> DeviceState:
         return self.state

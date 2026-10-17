@@ -2,7 +2,7 @@
 
 import asyncio
 from datetime import datetime
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from bleak.backends.device import BLEDevice
 from bleak.exc import BleakError
@@ -142,6 +142,7 @@ async def test_lock_serialises_connections() -> None:
 async def test_write_settings_command_and_time() -> None:
     client = FakeGattClient(_chars())
     dev = KestrelBleDevice(ADDR, DeviceFamily.DROP, ble_device=_ble_device())
+    dev.use_link_clock = False  # the fake client has no Mass Transfer service
     with patch(ESTABLISH, return_value=client):
         state = await dev.async_write_settings(DropSettings(log_interval_s=300))
         assert state.settings is not None and state.settings.log_interval_s == 300
@@ -161,3 +162,46 @@ async def test_write_settings_command_and_time() -> None:
         )
     dev.set_max_attempts(5)
     assert dev._max_attempts == 5
+
+
+async def test_link_clock_read_and_sync() -> None:
+    """DROP polls read the LiNK clock and time sync goes through LiNK too."""
+    client = FakeGattClient(_chars())
+    dev = KestrelBleDevice(ADDR, DeviceFamily.DROP, ble_device=_ble_device())
+    link = MagicMock()
+    link.get_time = AsyncMock(return_value=datetime(2026, 10, 17, 12, 44, 22))
+    link.set_time = AsyncMock()
+    transport = MagicMock()
+    transport.start = AsyncMock()
+    transport.stop = AsyncMock()
+    with (
+        patch(ESTABLISH, return_value=client),
+        patch(
+            "custom_components.kestrel.kestrel_link.device.LinkTransport",
+            return_value=transport,
+        ),
+        patch(
+            "custom_components.kestrel.kestrel_link.device.LinkClient",
+            return_value=link,
+        ),
+    ):
+        state = await dev.async_poll()
+        assert state.device_time == datetime(2026, 10, 17, 12, 44, 22)
+        transport.start.assert_awaited()
+        transport.stop.assert_awaited()
+
+        link.get_time = AsyncMock(return_value=datetime(2026, 10, 17, 10, 30, 0))
+        result = await dev.async_set_time(datetime(2026, 10, 17, 10, 30, 0))
+        link.set_time.assert_awaited_once_with(datetime(2026, 10, 17, 10, 30, 0))
+        assert result == datetime(2026, 10, 17, 10, 30, 0)
+        assert dev.state.device_time == result
+
+
+async def test_link_clock_failure_is_tolerated() -> None:
+    """A failing LiNK clock read must not fail the poll."""
+    client = FakeGattClient(_chars())
+    dev = KestrelBleDevice(ADDR, DeviceFamily.DROP, ble_device=_ble_device())
+    with patch(ESTABLISH, return_value=client):
+        state = await dev.async_poll()  # fake client has no Mass Transfer service
+    assert state.device_time is None
+    assert state.battery_percent is not None
