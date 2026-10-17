@@ -24,7 +24,7 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfVolumeFlowRate,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.util import dt as dt_util
@@ -267,17 +267,34 @@ async def async_setup_entry(
 ) -> None:
     """Create sensors for every measurement the device implements."""
     coordinator = entry.runtime_data
-    state = coordinator.data
-    entities: list[KestrelSensor] = [
-        KestrelSensor(coordinator, MEASUREMENT_DESCRIPTIONS[kind])
-        for kind in state.present_measurements()
-        if kind in MEASUREMENT_DESCRIPTIONS
-    ]
-    entities.extend(
+    created: set[MeasurementKind] = set()
+
+    @callback
+    def _async_add_new_measurements() -> None:
+        """Create sensors for measurements that have become present."""
+        state = coordinator.data
+        if state is None:
+            return
+        new = [
+            kind
+            for kind in state.present_measurements()
+            if kind in MEASUREMENT_DESCRIPTIONS and kind not in created
+        ]
+        if not new:
+            return
+        created.update(new)
+        async_add_entities(
+            KestrelSensor(coordinator, MEASUREMENT_DESCRIPTIONS[kind]) for kind in new
+        )
+
+    async_add_entities(
         KestrelSensor(coordinator, description)
         for description in DIAGNOSTIC_DESCRIPTIONS
     )
-    async_add_entities(entities)
+    _async_add_new_measurements()
+    # A measurement can appear later, e.g. barometric pressure once a
+    # reference altitude is known, so keep watching the coordinator.
+    entry.async_on_unload(coordinator.async_add_listener(_async_add_new_measurements))
 
 
 class KestrelSensor(KestrelEntity, SensorEntity):

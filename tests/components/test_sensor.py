@@ -12,7 +12,7 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.kestrel.const import DOMAIN
-from custom_components.kestrel.kestrel_link.const import MeasurementKind
+from custom_components.kestrel.kestrel_link.const import MeasurementKind, NativeUnit
 from custom_components.kestrel.kestrel_link.types import Measurement
 
 from .conftest import DROP_ADDRESS, FakeKestrelBleDevice
@@ -114,3 +114,24 @@ async def test_invalid_measurement_is_unknown(
     coordinator.async_update_listeners()
     await hass.async_block_till_done()
     assert hass.states.get(entity_id).state == "unknown"
+
+
+async def test_sensor_added_when_measurement_appears_later(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    mock_device: FakeKestrelBleDevice,
+) -> None:
+    """A measurement that becomes present after setup gets its own sensor."""
+    assert hass.states.get("sensor.d3_1234567_temperature_humidity_index_nrc") is None
+    mock_device.state.measurements[MeasurementKind.THI_NRC] = Measurement(
+        kind=MeasurementKind.THI_NRC,
+        value=12.5,
+        unit=NativeUnit.UNITLESS,
+    )
+    coordinator = init_integration.runtime_data
+    coordinator.data = mock_device.state
+    coordinator.async_update_listeners()
+    await hass.async_block_till_done()
+    state = hass.states.get("sensor.d3_1234567_temperature_humidity_index_nrc")
+    assert state is not None
+    assert state.state not in ("unknown", "unavailable")

@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 from bleak.exc import BleakError as _BleakError
 
 from .client import LinkClient
-from .const import DeviceFamily
+from .const import DeviceFamily, FieldName
 from .derived import add_derived_measurements
 from .models import model_from_code
 from .profiles import DeviceProfile, ProfileCommand, get_profile
@@ -34,6 +34,14 @@ BLEAK_EXCEPTIONS: tuple[type[_BleakError], type[TimeoutError], type[OSError]] = 
     TimeoutError,
     OSError,
 )
+
+
+def _field_label(code: int) -> str:
+    """Return a readable label for a LiNK field name code."""
+    try:
+        return FieldName(code).name.lower()
+    except ValueError:
+        return f"field_{code}"
 
 
 class KestrelBleDevice:
@@ -169,22 +177,37 @@ class KestrelBleDevice:
         shows, so the LiNK value is preferred when available.
         """
 
-        async def _read(link: LinkClient) -> tuple[datetime | None, int | None]:
+        async def _read(
+            link: LinkClient,
+        ) -> tuple[datetime | None, int | None, dict[str, Any] | None]:
             clock = await link.get_time()
             try:
                 battery: int | None = await link.get_battery()
             except KestrelError as err:
                 _LOGGER.debug("%s: LiNK battery read failed: %s", self.address, err)
                 battery = None
-            return clock, battery
+            snapshot: dict[str, Any] | None = None
+            try:
+                record = await link.get_data_snapshot()
+            except KestrelError as err:
+                _LOGGER.debug("%s: LiNK snapshot failed: %s", self.address, err)
+            else:
+                if record is not None:
+                    snapshot = {
+                        _field_label(code): value
+                        for code, value in record.values.items()
+                    }
+                    snapshot["timestamp"] = record.timestamp
+            return clock, battery, snapshot
 
         try:
-            clock, battery = await self._with_link(client, _read)
+            clock, battery, snapshot = await self._with_link(client, _read)
         except (*BLEAK_EXCEPTIONS, KestrelError, AttributeError, TypeError) as err:
             _LOGGER.debug("%s: LiNK status read failed: %s", self.address, err)
             self.state.device_time = None
             return
         self.state.device_time = clock
+        self.state.link_snapshot = snapshot
         if battery is not None and 0 <= battery <= 100:
             self.state.raw["link:battery"] = battery.to_bytes(2, "little")
             self.state.battery_percent = battery

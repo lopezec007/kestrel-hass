@@ -22,6 +22,7 @@ from custom_components.kestrel.kestrel_link.types import (
     CharacteristicMissingError,
     DropSettings,
     KestrelError,
+    LinkRecord,
     UnsupportedDeviceError,
 )
 
@@ -171,6 +172,11 @@ async def test_link_clock_read_and_sync() -> None:
     link = MagicMock()
     link.get_time = AsyncMock(return_value=datetime(2026, 10, 17, 12, 44, 22))
     link.get_battery = AsyncMock(return_value=23)
+    link.get_data_snapshot = AsyncMock(
+        return_value=LinkRecord(
+            timestamp=datetime(2026, 10, 17, 12, 44, 22), values={1: 23, 2: 20.5}
+        )
+    )
     link.set_time = AsyncMock()
     transport = MagicMock()
     transport.start = AsyncMock()
@@ -190,6 +196,11 @@ async def test_link_clock_read_and_sync() -> None:
         assert state.device_time == datetime(2026, 10, 17, 12, 44, 22)
         assert state.battery_percent == 23
         assert state.battery_source == "link"
+        assert state.link_snapshot == {
+            "battery_percentage": 23,
+            "dry_bulb_temp": 20.5,
+            "timestamp": datetime(2026, 10, 17, 12, 44, 22),
+        }
         transport.start.assert_awaited()
         transport.stop.assert_awaited()
 

@@ -328,6 +328,8 @@ class DeviceState:
     settings: DropSettings | KestrelSettings | None = None
     rssi: int | None = None
     raw: dict[str, bytes] = field(default_factory=dict)  # char uuid -> raw bytes
+    # Latest LiNK data snapshot: field name (enum name or code) -> value.
+    link_snapshot: dict[str, Any] | None = None
     updated_at: datetime | None = None
 
     def present_measurements(self) -> dict[MeasurementKind, Measurement]:
