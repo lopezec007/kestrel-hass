@@ -1,0 +1,245 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "bluetooth_confirm": {
+        "description": "Do you want to set up {name}?"
+      },
+      "user": {
+        "description": "Choose a Kestrel device to set up.",
+        "data": {
+          "address": "Device"
+        },
+        "data_description": {
+          "address": "Kestrel devices discovered via Bluetooth."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Device is already configured",
+      "already_in_progress": "Configuration flow is already in progress",
+      "no_devices_found": "No Kestrel devices found on the network",
+      "not_supported": "This Nielsen-Kellerman device is not supported",
+      "cannot_connect": "Failed to connect"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "poll_interval": "Poll interval"
+        },
+        "data_description": {
+          "poll_interval": "Minimum number of seconds between Bluetooth connections to read the device. Shorter intervals use more battery."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "Temperature"
+      },
+      "relative_humidity": {
+        "name": "Humidity"
+      },
+      "heat_index": {
+        "name": "Heat index"
+      },
+      "dew_point": {
+        "name": "Dew point"
+      },
+      "wet_bulb_temperature": {
+        "name": "Wet bulb temperature"
+      },
+      "delta_t": {
+        "name": "Delta T"
+      },
+      "station_pressure": {
+        "name": "Station pressure"
+      },
+      "barometric_pressure": {
+        "name": "Barometric pressure"
+      },
+      "pressure_trend": {
+        "name": "Pressure trend"
+      },
+      "density_altitude": {
+        "name": "Density altitude"
+      },
+      "humidity_ratio": {
+        "name": "Humidity ratio"
+      },
+      "moisture_content": {
+        "name": "Moisture content"
+      },
+      "relative_air_density": {
+        "name": "Relative air density"
+      },
+      "thi_nrc": {
+        "name": "Temperature humidity index (NRC)"
+      },
+      "thi_yousef": {
+        "name": "Temperature humidity index (Yousef)"
+      },
+      "wind_speed": {
+        "name": "Wind speed"
+      },
+      "globe_temperature": {
+        "name": "Globe temperature"
+      },
+      "magnetic_direction": {
+        "name": "Magnetic direction"
+      },
+      "true_direction": {
+        "name": "True direction"
+      },
+      "air_density": {
+        "name": "Air density"
+      },
+      "altitude": {
+        "name": "Altitude"
+      },
+      "crosswind": {
+        "name": "Crosswind"
+      },
+      "headwind": {
+        "name": "Headwind"
+      },
+      "evaporation_rate": {
+        "name": "Evaporation rate"
+      },
+      "thermal_work_limit": {
+        "name": "Thermal work limit"
+      },
+      "wet_bulb_globe_temperature": {
+        "name": "Wet bulb globe temperature"
+      },
+      "naturally_aspirated_wet_bulb": {
+        "name": "Naturally aspirated wet bulb"
+      },
+      "wind_chill": {
+        "name": "Wind chill"
+      },
+      "air_speed": {
+        "name": "Air speed"
+      },
+      "air_flow": {
+        "name": "Air flow"
+      },
+      "heat_load_index": {
+        "name": "Heat load index"
+      },
+      "probability_of_ignition": {
+        "name": "Probability of ignition"
+      },
+      "ahlu_1": {
+        "name": "Accumulated heat load units 1"
+      },
+      "ahlu_2": {
+        "name": "Accumulated heat load units 2"
+      },
+      "ahlu_3": {
+        "name": "Accumulated heat load units 3"
+      },
+      "vapor_pressure_deficit": {
+        "name": "Vapor pressure deficit"
+      },
+      "humidex": {
+        "name": "Humidex"
+      },
+      "discomfort_index": {
+        "name": "Discomfort index"
+      },
+      "device_time": {
+        "name": "Device time"
+      }
+    },
+    "select": {
+      "log_interval": {
+        "name": "Log interval",
+        "state": {
+          "0": "Off",
+          "2": "2 seconds",
+          "5": "5 seconds",
+          "10": "10 seconds",
+          "20": "20 seconds",
+          "30": "30 seconds",
+          "60": "1 minute",
+          "120": "2 minutes",
+          "300": "5 minutes",
+          "360": "6 minutes",
+          "600": "10 minutes",
+          "1200": "20 minutes",
+          "1800": "30 minutes",
+          "3600": "1 hour",
+          "7200": "2 hours",
+          "21600": "6 hours",
+          "43200": "12 hours"
+        }
+      }
+    },
+    "number": {
+      "transmission_rate": {
+        "name": "Transmission rate"
+      },
+      "reference_altitude": {
+        "name": "Reference altitude"
+      }
+    },
+    "switch": {
+      "wrap_log": {
+        "name": "Wrap log"
+      }
+    },
+    "button": {
+      "sync_time": {
+        "name": "Sync time"
+      },
+      "erase_log": {
+        "name": "Erase data log"
+      }
+    }
+  },
+  "services": {
+    "import_data_log": {
+      "name": "Import data log",
+      "description": "Downloads the on-device data log over the Kestrel LiNK protocol and imports it as hourly long-term statistics for the device's sensors.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The Kestrel device to download from."
+        },
+        "mode": {
+          "name": "Mode",
+          "description": "Import only records newer than the last import, or the whole log."
+        }
+      }
+    }
+  },
+  "selector": {
+    "import_mode": {
+      "options": {
+        "new": "New records only",
+        "all": "Entire log"
+      }
+    }
+  },
+  "exceptions": {
+    "recorder_not_loaded": {
+      "message": "The recorder integration must be loaded to import statistics."
+    },
+    "device_not_found": {
+      "message": "Device {device_id} was not found."
+    },
+    "not_kestrel_device": {
+      "message": "Device {device_id} is not a Kestrel device."
+    },
+    "entry_not_loaded": {
+      "message": "The Kestrel device {device_id} is not loaded."
+    },
+    "download_failed": {
+      "message": "Downloading the data log failed: {error}"
+    }
+  }
+}

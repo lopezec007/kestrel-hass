@@ -1,0 +1,110 @@
+{
+  "entity": {
+    "sensor": {
+      "heat_index": {
+        "default": "mdi:sun-thermometer"
+      },
+      "dew_point": {
+        "default": "mdi:water-thermometer"
+      },
+      "wet_bulb_temperature": {
+        "default": "mdi:thermometer-water"
+      },
+      "delta_t": {
+        "default": "mdi:delta"
+      },
+      "density_altitude": {
+        "default": "mdi:altimeter"
+      },
+      "altitude": {
+        "default": "mdi:altimeter"
+      },
+      "humidity_ratio": {
+        "default": "mdi:water-percent"
+      },
+      "moisture_content": {
+        "default": "mdi:water-percent"
+      },
+      "relative_air_density": {
+        "default": "mdi:weather-windy-variant"
+      },
+      "air_density": {
+        "default": "mdi:weather-windy-variant"
+      },
+      "thi_nrc": {
+        "default": "mdi:cow"
+      },
+      "thi_yousef": {
+        "default": "mdi:cow"
+      },
+      "heat_load_index": {
+        "default": "mdi:cow"
+      },
+      "ahlu_1": {
+        "default": "mdi:cow"
+      },
+      "ahlu_2": {
+        "default": "mdi:cow"
+      },
+      "ahlu_3": {
+        "default": "mdi:cow"
+      },
+      "evaporation_rate": {
+        "default": "mdi:water-outline"
+      },
+      "thermal_work_limit": {
+        "default": "mdi:account-hard-hat"
+      },
+      "wet_bulb_globe_temperature": {
+        "default": "mdi:sun-thermometer-outline"
+      },
+      "naturally_aspirated_wet_bulb": {
+        "default": "mdi:thermometer-water"
+      },
+      "wind_chill": {
+        "default": "mdi:snowflake-thermometer"
+      },
+      "probability_of_ignition": {
+        "default": "mdi:fire-alert"
+      },
+      "humidex": {
+        "default": "mdi:thermometer-lines"
+      },
+      "discomfort_index": {
+        "default": "mdi:emoticon-neutral-outline"
+      },
+      "pressure_trend": {
+        "default": "mdi:trending-up"
+      },
+      "device_time": {
+        "default": "mdi:clock-outline"
+      }
+    },
+    "select": {
+      "log_interval": {
+        "default": "mdi:timer-cog-outline"
+      }
+    },
+    "number": {
+      "transmission_rate": {
+        "default": "mdi:timer-sync-outline"
+      },
+      "reference_altitude": {
+        "default": "mdi:image-filter-hdr"
+      }
+    },
+    "switch": {
+      "wrap_log": {
+        "default": "mdi:autorenew"
+      }
+    },
+    "button": {
+      "sync_time": {
+        "default": "mdi:clock-check-outline"
+      },
+      "erase_log": {
+        "default": "mdi:delete-alert"
+      }
+    }
+  }
+}

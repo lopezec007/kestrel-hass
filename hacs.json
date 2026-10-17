@@ -1,0 +1,6 @@
+{
+  "name": "Kestrel",
+  "render_readme": true,
+  "homeassistant": "2026.2.0",
+  "hide_default_branch": true
+}

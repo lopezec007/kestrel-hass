@@ -1,0 +1,17 @@
+import_data_log:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          filter:
+            - integration: kestrel
+    mode:
+      required: false
+      default: new
+      selector:
+        select:
+          options:
+            - new
+            - all
+          translation_key: import_mode

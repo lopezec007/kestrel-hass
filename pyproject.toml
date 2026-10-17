@@ -1,0 +1,56 @@
+[project]
+name = "kestrel-hass"
+version = "0.1.0"
+description = "Home Assistant integration for Kestrel (Nielsen-Kellerman) Bluetooth weather instruments"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-p no:cacheprovider -q"
+filterwarnings = [
+  "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["custom_components/kestrel"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+extend-exclude = [".venv", ".venv314"]
+
+[tool.ruff.lint]
+select = [
+  "E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF", "PL", "ASYNC", "T20", "PIE", "RET", "N", "D",
+]
+ignore = [
+  "D203", "D213", "D107", "D105", "D102", "D101", "D100", "D104",
+  "PLR2004", "PLR0913", "PLR0912", "PLR0911", "PLR0915", "RUF012", "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D", "PLR", "S", "ARG", "T20"]
+"scripts/**" = ["T20", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components.kestrel"]
+force-sort-within-sections = true
+combine-as-imports = true
+
+[tool.mypy]
+python_version = "3.13"
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_unused_ignores = false

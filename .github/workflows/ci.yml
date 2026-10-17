@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    name: Lint & test (HA ${{ matrix.ha }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: "3.14"
+            ha: "latest"
+          - python: "3.13"
+            ha: "2026.2.3"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Create environment
+        run: |
+          uv venv --python ${{ matrix.python }} .venv
+          if [ "${{ matrix.ha }}" = "latest" ]; then
+            uv pip install --python .venv/bin/python homeassistant pytest-homeassistant-custom-component
+          else
+            uv pip install --python .venv/bin/python "homeassistant==${{ matrix.ha }}" \
+              "pytest-homeassistant-custom-component<0.13.320"
+          fi
+          uv pip install --python .venv/bin/python pytest pytest-asyncio pytest-cov ruff
+          # The bluetooth stack is not part of the homeassistant wheel; install
+          # the requirements declared by the core components we depend on.
+          .venv/bin/python - <<'PY' > reqs.txt
+          import json, pathlib, homeassistant
+          ha = pathlib.Path(homeassistant.__file__).parent / "components"
+          reqs = set()
+          for comp in ["bluetooth", "bluetooth_adapters", "usb", "recorder", "sensor",
+                       "number", "switch", "button", "select", "diagnostics"]:
+              reqs.update(json.loads((ha / comp / "manifest.json").read_text()).get("requirements", []))
+          print("\n".join(sorted(reqs)))
+          PY
+          uv pip install --python .venv/bin/python -r reqs.txt
+      - name: Ruff
+        run: |
+          .venv/bin/ruff check .
+          .venv/bin/ruff format --check .
+      - name: Pytest
+        run: .venv/bin/python -m pytest --cov --cov-report=term-missing
+
+  hassfest:
+    name: hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    name: HACS validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hacs/action@main
+        with:
+          category: integration
