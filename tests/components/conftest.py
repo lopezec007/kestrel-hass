@@ -23,6 +23,7 @@ from custom_components.kestrel.const import (
     CONF_FAMILY,
     CONF_MODEL_CODE,
     CONF_POLL_INTERVAL,
+    CONF_SYNC_REFERENCE_ALTITUDE,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
 )
@@ -297,7 +298,11 @@ def mock_config_entry() -> MockConfigEntry:
             CONF_FAMILY: DeviceFamily.DROP.value,
             CONF_MODEL_CODE: DROP_MODEL_CODE,
         },
-        options={CONF_POLL_INTERVAL: DEFAULT_POLL_INTERVAL},
+        # Reference-altitude sync is exercised in its own test module.
+        options={
+            CONF_POLL_INTERVAL: DEFAULT_POLL_INTERVAL,
+            CONF_SYNC_REFERENCE_ALTITUDE: False,
+        },
     )
 
 

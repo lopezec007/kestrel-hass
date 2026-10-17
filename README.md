@@ -53,6 +53,7 @@ Options (gear icon on the integration entry):
 | Option | Default | Notes |
 |---|---|---|
 | Poll interval | 300 s | How often to connect and read measurements (30–3600 s). Shorter intervals drain the DROP's coin cell faster. |
+| Use Home Assistant's elevation as reference altitude | on | Writes the home elevation (*Settings → System → General*) to the device whenever they differ, including when you change the elevation later. Turn off to set the reference altitude manually. |
 
 ## Entities
 
@@ -64,7 +65,7 @@ Options (gear icon on the integration entry):
 | Signal strength | sensor (diagnostic, disabled) | RSSI of the last advertisement. |
 | Log interval | select | 2 s … 12 h or Off. |
 | Transmission rate | number | 2–60 s between live notifications (used by the Kestrel LiNK app). |
-| Reference altitude | number | Metres; used by the DROP to derive barometric pressure from station pressure. |
+| Reference altitude | number | Metres; used by the DROP to derive barometric pressure from station pressure. By default it follows Home Assistant's home elevation (see Options). |
 | Wrap log | switch | Overwrite the oldest log records when the memory is full. |
 | Identify | button | Blinks the LED. |
 | Sync time | button | Sets the device clock to Home Assistant's local time (GATT characteristic and LiNK Set Time). |
@@ -93,6 +94,13 @@ Timestamps come from the device clock. On the DROP the GATT Date/Time
 characteristic is a plain register (it returns whatever was last written), so
 the integration reads and sets the real clock through LiNK; press *Sync time*
 once if the imported history looks shifted.
+
+### Logo
+
+Home Assistant loads integration logos from its central brands repository, so
+a freshly installed custom integration shows a "logo not available"
+placeholder. The Kestrel Instruments assets, sized for that repository, are in
+`brands/kestrel/` with submission steps in `brands/README.md`.
 
 ## Hardware validation
 

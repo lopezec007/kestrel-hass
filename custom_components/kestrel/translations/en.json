@@ -27,11 +27,14 @@
     "step": {
       "init": {
         "data": {
-          "poll_interval": "Poll interval"
+          "poll_interval": "Poll interval",
+          "sync_reference_altitude": "Use Home Assistant's elevation as reference altitude"
         },
         "data_description": {
-          "poll_interval": "Minimum number of seconds between Bluetooth connections to read the device. Shorter intervals use more battery."
-        }
+          "poll_interval": "Minimum number of seconds between Bluetooth connections to read the device. Shorter intervals use more battery.",
+          "sync_reference_altitude": "Keep the device's reference altitude equal to the home elevation set under Settings → System → General. The DROP uses it to derive barometric pressure from station pressure. Turn off to set the reference altitude manually."
+        },
+        "description": "Home Assistant's home elevation is currently {elevation} m."
       }
     }
   },

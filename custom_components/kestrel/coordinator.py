@@ -16,8 +16,8 @@ from homeassistant.components.bluetooth.active_update_coordinator import (
     ActiveBluetoothDataUpdateCoordinator,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.const import CONF_ADDRESS, EVENT_CORE_CONFIG_UPDATE
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
@@ -26,7 +26,9 @@ from .const import (
     CONF_FAMILY,
     CONF_MODEL_CODE,
     CONF_POLL_INTERVAL,
+    CONF_SYNC_REFERENCE_ALTITUDE,
     DEFAULT_POLL_INTERVAL,
+    DEFAULT_SYNC_REFERENCE_ALTITUDE,
 )
 from .kestrel_link.const import DeviceFamily
 from .kestrel_link.device import BLEAK_EXCEPTIONS, KestrelBleDevice
@@ -84,6 +86,51 @@ class KestrelCoordinator(ActiveBluetoothDataUpdateCoordinator[DeviceState]):
         """Return the configured minimum seconds between polls."""
         return int(self.entry.options.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL))
 
+    @property
+    def sync_reference_altitude(self) -> bool:
+        """Return True if the device's reference altitude follows HA's elevation."""
+        return bool(
+            self.entry.options.get(
+                CONF_SYNC_REFERENCE_ALTITUDE, DEFAULT_SYNC_REFERENCE_ALTITUDE
+            )
+        )
+
+    def _target_reference_altitude(self, state: DeviceState) -> int | None:
+        """Return the altitude to write, or None if no change is needed."""
+        if not self.sync_reference_altitude or state.settings is None:
+            return None
+        target = round(self.hass.config.elevation)
+        if state.settings.reference_altitude_m == target:
+            return None
+        return target
+
+    async def _async_apply_reference_altitude(self, state: DeviceState) -> DeviceState:
+        """Write HA's elevation as the device reference altitude if it differs."""
+        if (target := self._target_reference_altitude(state)) is None:
+            return state
+        _LOGGER.info(
+            "%s: setting reference altitude to %s m (Home Assistant elevation)",
+            self.address,
+            target,
+        )
+        return await self.device.async_write_settings(
+            DropSettings(reference_altitude_m=target)
+        )
+
+    @callback
+    def _async_core_config_updated(self, _event: Event) -> None:
+        """Re-check the reference altitude when the home elevation changes."""
+        if self.data is None or self._target_reference_altitude(self.data) is None:
+            return
+        self._last_poll = None  # make the next check poll immediately
+        if (
+            service_info := bluetooth.async_last_service_info(
+                self.hass, self.address, True
+            )
+        ) is not None:
+            self._last_service_info = service_info
+            self._debounced_poll.async_schedule_call()
+
     @callback
     def _async_start(self) -> None:
         """Start advertisement tracking plus the timed poll fallback."""
@@ -97,6 +144,11 @@ class KestrelCoordinator(ActiveBluetoothDataUpdateCoordinator[DeviceState]):
                 self._async_scheduled_poll,
                 timedelta(seconds=check_every),
                 name=f"Kestrel {self.address} poll check",
+            )
+        )
+        self._on_stop.append(
+            self.hass.bus.async_listen(
+                EVENT_CORE_CONFIG_UPDATE, self._async_core_config_updated
             )
         )
 
@@ -150,6 +202,7 @@ class KestrelCoordinator(ActiveBluetoothDataUpdateCoordinator[DeviceState]):
         """Connect to the device and read its full state."""
         self.device.set_ble_device(service_info.device)
         state = await self.device.async_poll()
+        state = await self._async_apply_reference_altitude(state)
         return self._finish_state(state, service_info.rssi)
 
     async def async_initial_poll(self) -> None:
@@ -160,6 +213,7 @@ class KestrelCoordinator(ActiveBluetoothDataUpdateCoordinator[DeviceState]):
         """
         try:
             state = await self.device.async_poll()
+            state = await self._async_apply_reference_altitude(state)
         except (*BLEAK_EXCEPTIONS, KestrelError, TimeoutError) as err:
             raise ConfigEntryNotReady(
                 f"Unable to connect to Kestrel device {self.address}: {err}"

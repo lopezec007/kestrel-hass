@@ -18,6 +18,7 @@ from homeassistant.config_entries import (
 from homeassistant.const import CONF_ADDRESS
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -32,7 +33,9 @@ from .const import (
     CONF_FAMILY,
     CONF_MODEL_CODE,
     CONF_POLL_INTERVAL,
+    CONF_SYNC_REFERENCE_ALTITUDE,
     DEFAULT_POLL_INTERVAL,
+    DEFAULT_SYNC_REFERENCE_ALTITUDE,
     DOMAIN,
     MAX_POLL_INTERVAL,
     MIN_POLL_INTERVAL,
@@ -92,7 +95,10 @@ class KestrelConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_FAMILY: adv.family.value,
                 CONF_MODEL_CODE: adv.model_code,
             },
-            options={CONF_POLL_INTERVAL: DEFAULT_POLL_INTERVAL},
+            options={
+                CONF_POLL_INTERVAL: DEFAULT_POLL_INTERVAL,
+                CONF_SYNC_REFERENCE_ALTITUDE: DEFAULT_SYNC_REFERENCE_ALTITUDE,
+            },
         )
 
     async def async_step_bluetooth(
@@ -169,10 +175,20 @@ class KestrelOptionsFlow(OptionsFlowWithReload):
         """Manage the poll interval."""
         if user_input is not None:
             return self.async_create_entry(
-                data={CONF_POLL_INTERVAL: int(user_input[CONF_POLL_INTERVAL])}
+                data={
+                    CONF_POLL_INTERVAL: int(user_input[CONF_POLL_INTERVAL]),
+                    CONF_SYNC_REFERENCE_ALTITUDE: bool(
+                        user_input.get(
+                            CONF_SYNC_REFERENCE_ALTITUDE,
+                            DEFAULT_SYNC_REFERENCE_ALTITUDE,
+                        )
+                    ),
+                }
             )
-        current = self.config_entry.options.get(
-            CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL
+        options = self.config_entry.options
+        current = options.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)
+        current_sync = options.get(
+            CONF_SYNC_REFERENCE_ALTITUDE, DEFAULT_SYNC_REFERENCE_ALTITUDE
         )
         return self.async_show_form(
             step_id="init",
@@ -186,7 +202,13 @@ class KestrelOptionsFlow(OptionsFlowWithReload):
                             mode=NumberSelectorMode.BOX,
                             unit_of_measurement="s",
                         )
-                    )
+                    ),
+                    vol.Required(
+                        CONF_SYNC_REFERENCE_ALTITUDE, default=current_sync
+                    ): BooleanSelector(),
                 }
             ),
+            description_placeholders={
+                "elevation": str(round(self.hass.config.elevation))
+            },
         )

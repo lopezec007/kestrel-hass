@@ -20,7 +20,10 @@ async def test_config_entry_diagnostics(
     diag = await async_get_config_entry_diagnostics(hass, init_integration)
 
     assert diag["entry"]["data"]["address"] == DROP_ADDRESS
-    assert diag["entry"]["options"] == {"poll_interval": 300}
+    assert diag["entry"]["options"] == {
+        "poll_interval": 300,
+        "sync_reference_altitude": False,
+    }
     assert diag["available"] is True
     assert diag["poll_interval"] == 300
 

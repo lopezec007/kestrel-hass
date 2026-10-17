@@ -12,6 +12,7 @@ from custom_components.kestrel.const import (
     CONF_FAMILY,
     CONF_MODEL_CODE,
     CONF_POLL_INTERVAL,
+    CONF_SYNC_REFERENCE_ALTITUDE,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
 )
@@ -54,7 +55,10 @@ async def test_bluetooth_discovery(
         CONF_FAMILY: "drop",
         CONF_MODEL_CODE: DROP_MODEL_CODE,
     }
-    assert result["options"] == {CONF_POLL_INTERVAL: DEFAULT_POLL_INTERVAL}
+    assert result["options"] == {
+        CONF_POLL_INTERVAL: DEFAULT_POLL_INTERVAL,
+        CONF_SYNC_REFERENCE_ALTITUDE: True,
+    }
     assert result["result"].unique_id == DROP_ADDRESS
 
 
@@ -148,12 +152,16 @@ async def test_options_flow(
     assert result["step_id"] == "init"
 
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], user_input={CONF_POLL_INTERVAL: 120}
+        result["flow_id"],
+        user_input={CONF_POLL_INTERVAL: 120, CONF_SYNC_REFERENCE_ALTITUDE: False},
     )
     await hass.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert entry.options == {CONF_POLL_INTERVAL: 120}
+    assert entry.options == {
+        CONF_POLL_INTERVAL: 120,
+        CONF_SYNC_REFERENCE_ALTITUDE: False,
+    }
     assert entry.state is config_entries.ConfigEntryState.LOADED
     # Reload created a new device wrapper and polled again.
     assert mock_device.async_poll.await_count == 1
